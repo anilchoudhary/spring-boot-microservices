@@ -3,7 +3,10 @@ package dev.anil.moviecatalogservice.controller;
 import dev.anil.moviecatalogservice.models.CatalogItem;
 import dev.anil.moviecatalogservice.models.Movie;
 import dev.anil.moviecatalogservice.models.Rating;
+import dev.anil.moviecatalogservice.models.UserRatings;
+import org.apache.catalina.filters.AddDefaultCharsetFilter;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
@@ -16,6 +19,7 @@ import org.springframework.web.reactive.function.client.WebClient;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 @RestController
@@ -30,14 +34,14 @@ public class Controller {
 
     @GetMapping("/{userId}")
     public ResponseEntity<List<CatalogItem>> getMovieCatalog(@PathVariable("userId") String userId){
-        List<Rating> ratingsList = Arrays.asList(
-                new Rating("1234", 3),
-                new Rating("5678", 4)
-        );
+        List<Rating> ratingsList;
+//        ratingsList = Arrays.asList(Objects.requireNonNull(restTemplate.getForObject("http://localhost:8082/ratingsdata/users/"+userId, Rating[].class)));
+        UserRatings userRatings = restTemplate.getForObject("http://localhost:8082/ratingsdata/users/"+userId, UserRatings.class);
+        ratingsList = userRatings.getUserRatings();
         List<CatalogItem> response;
         response = ratingsList.stream().map(rating -> {
-//            Movie movie = restTemplate.getForObject("http://localhost:8081/movies/"+rating.getMovieId(), Movie.class);
-            Movie movie = webClientBuilder.build().get().uri("http://localhost:8081/movies/"+rating.getMovieId()).retrieve().bodyToMono(Movie.class).block();
+            Movie movie = restTemplate.getForObject("http://localhost:8081/movies/"+rating.getMovieId(), Movie.class);
+//            Movie movie = webClientBuilder.build().get().uri("http://localhost:8081/movies/"+rating.getMovieId()).retrieve().bodyToMono(Movie.class).block();
             return new CatalogItem(movie.getName(),"description", rating.getRating());
         }).collect(Collectors.toList());
 
